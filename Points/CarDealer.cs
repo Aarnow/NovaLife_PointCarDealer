@@ -10,6 +10,9 @@ using System.Linq;
 using Life;
 using Newtonsoft.Json;
 using UnityEngine;
+using PointCarDealer.Entities;
+using ModKit.Utils;
+using System;
 
 namespace PointCarDealer.Points
 {
@@ -71,32 +74,36 @@ namespace PointCarDealer.Points
         #region CUSTOM
         public async void PointCarDealerPanel(Player player)
         {
-           /* var query = await PointShop_Item.QueryAll();
-            List<PointShop_Item> items = query.Where(i => LItems.Contains(i.Id)).ToList();*/
+            List<PointCarDealer_Vehicle> vehicles = await PointCarDealer_Vehicle.QueryAll();
+            vehicles = vehicles.Where(i => LVehicles.Contains(i.Id)).ToList();
 
             Panel panel = Context.PanelHelper.Create($"{PatternName}", UIPanel.PanelType.TabPrice, player, () => PointCarDealerPanel(player));
 
-            /*foreach (var item in items)
+            foreach (var vehicle in vehicles)
             {
-                var currentItem = ItemUtils.GetItemById(item.ItemId);
-                panel.AddTabLine($"{currentItem.itemName}", $"{item.Price}€", ItemUtils.GetIconIdByItemId(item.ItemId), _ => { });
+                panel.AddTabLine($"{VehicleUtils.GetModelNameByModelId(vehicle.ModelId)}", $"{vehicle.Price}€", VehicleUtils.GetIconId(vehicle.ModelId), _ => { });
             }
 
-            if (items.Count > 0)
+            if (vehicles.Count > 0)
             {
                 panel.NextButton("Acheter", () =>
                 {
-                    if (items[panel.selectedTab].IsBuyable) PointShopBuyPanel(player, items[panel.selectedTab]);
+                    if (vehicles[panel.selectedTab].IsBuyable)
+                    {
+                        //code
+                    }
                     else
                     {
-                        player.Notify("PointShop", "Cette objet n'est pas achetable", NotificationManager.Type.Info);
+                        player.Notify("PointCarDealer", "Ce véhicule n'est pas achetable", NotificationManager.Type.Info);
                         panel.Refresh();
                     }
                 });
                 panel.NextButton("Vendre", () =>
                 {
-                    var currentItem = ItemUtils.GetItemById(items[panel.selectedTab].ItemId);
-                    if (items[panel.selectedTab].IsResellable) PointShopSellPanel(player, items[panel.selectedTab]);
+                    if (vehicles[panel.selectedTab].IsResellable)
+                    {
+                        //code
+                    }
                     else
                     {
                         player.Notify("PointShop", "Cette objet n'est pas vendable", NotificationManager.Type.Info);
@@ -113,32 +120,31 @@ namespace PointCarDealer.Points
                     if (player.HasBiz() || (player.IsAdmin && player.serviceAdmin && player.HasBiz()))
                     {
                         var permissions = await PermissionUtils.GetPlayerPermission(player);
-                        if (player.biz.OwnerId == player.character.Id || (permissions.hasRemoveMoneyPermission && permissions.hasAddMoneyPermission)) PointShopLogsPanel(player);
-                        else player.Notify("PointShop", "Vous ne disposez pas des droits sur le compte bancaire d'entreprise", Life.NotificationManager.Type.Warning);
+                        if (player.biz.OwnerId == player.character.Id || (permissions.hasRemoveMoneyPermission && permissions.hasAddMoneyPermission)) PointCarDealerLogsPanel(player);
+                        else player.Notify("PointCarDealer", "Vous ne disposez pas des droits sur le compte bancaire d'entreprise", Life.NotificationManager.Type.Warning);
                     }
-                    else player.Notify("PointShop", "Vous devez être propriétaire ou avoir les droits sur le compte en banque de votre société", Life.NotificationManager.Type.Warning);
+                    else player.Notify("PointCarDealer", "Vous devez être propriétaire ou avoir les droits sur le compte en banque de votre société", Life.NotificationManager.Type.Warning);
                 });
             }
-            if (player.IsAdmin && player.serviceAdmin) panel.NextButton("Admin", () => PointShopAdminPanel(player));*/
+            if (player.IsAdmin && player.serviceAdmin) panel.NextButton("Admin", () => PointCarDealerAdminPanel(player));
             panel.CloseButton();
 
             panel.Display();
         }
-       /* public async void PointShopLogsPanel(Player player)
+        public async void PointCarDealerLogsPanel(Player player)
         {
-            var query = await PointShop_Logs.QueryAll();
-            List<PointShop_Logs> logs = query.Where(l => l.ShopId == Id && l.BizId == player.character.BizId).ToList();
+            List<PointCarDealer_Logs> logs = await PointCarDealer_Logs.QueryAll();
+            logs = logs.Where(l => l.ShopId == Id && l.BizId == player.character.BizId).ToList();
             logs.Reverse();
 
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Historique", UIPanel.PanelType.TabPrice, player, () => PointShopLogsPanel(player));
+            Panel panel = Context.PanelHelper.Create($"{PatternName} - Historique", UIPanel.PanelType.TabPrice, player, () => PointCarDealerLogsPanel(player));
 
             foreach (var log in logs)
             {
-                var currentItem = ItemUtils.GetItemById(log.ItemId);
                 panel.AddTabLine($"{mk.Color($"{(log.IsPurchase ? "ACHAT" : "VENTE")}", (log.IsPurchase ? mk.Colors.Success : mk.Colors.Orange))} par {mk.Color(log.CharacterFullName, mk.Colors.Info)}<br>" +
-                    $"{mk.Size($"{currentItem.itemName} x {mk.Color($"{log.Quantity}", mk.Colors.Warning)}", 14)}",
-                    $"{DateUtils.ConvertNumericalDateToString(log.CreatedAt)}<br>{mk.Align($"{mk.Color($"{(log.IsPurchase ? "-" : "+")} {log.Price * log.Quantity}€", mk.Colors.Verbose)}", mk.Aligns.Center)}",
-                    ItemUtils.GetIconIdByItemId(currentItem.id), _ => { });
+                    $"{mk.Size($"{VehicleUtils.GetModelNameByModelId(log.ModelId)}", 14)}",
+                    $"{DateUtils.ConvertNumericalDateToString(log.CreatedAt)}<br>{mk.Align($"{mk.Color($"{(log.IsPurchase ? "-" : "+")} {log.Price}€", mk.Colors.Verbose)}", mk.Aligns.Center)}",
+                    VehicleUtils.GetIconId(log.ModelId), _ => { });
             }
 
             panel.PreviousButton();
@@ -146,21 +152,20 @@ namespace PointCarDealer.Points
 
             panel.Display();
         }
-        public async void PointShopAdminPanel(Player player)
+        public async void PointCarDealerAdminPanel(Player player)
         {
-            var query = await PointShop_Item.QueryAll();
-            List<PointShop_Item> items = query.Where(i => LItems.Contains(i.Id)).ToList();
+            List<PointCarDealer_Vehicle> vehicles = await PointCarDealer_Vehicle.QueryAll();
+            vehicles = vehicles.Where(i => LVehicles.Contains(i.Id)).ToList();
 
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier la boutique", UIPanel.PanelType.TabPrice, player, () => PointShopAdminPanel(player));
+            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier la boutique", UIPanel.PanelType.TabPrice, player, () => PointCarDealerAdminPanel(player));
 
-            foreach (var item in items)
+            foreach (var vehicle in vehicles)
             {
-                var currentItem = ItemUtils.GetItemById(item.ItemId);
-                panel.AddTabLine($"{currentItem.itemName}", $"{item.Price}€", ItemUtils.GetIconIdByItemId(item.ItemId), _ => PointShopAdminItemPanel(player, item));
+                panel.AddTabLine($"{VehicleUtils.GetModelNameByModelId(vehicle.ModelId)}", $"{vehicle.Price}€", VehicleUtils.GetIconId(vehicle.ModelId), _ => PointShopAdminItemPanel(player, vehicle));
             }
 
             panel.NextButton("Ajouter", () => PointShopAddItemPanel(player));
-            if (items.Count > 0) panel.AddButton("Modifier", _ => panel.SelectTab());
+            if (vehicles.Count > 0) panel.AddButton("Modifier", _ => panel.SelectTab());
             panel.PreviousButton();
             panel.CloseButton();
 
@@ -170,43 +175,43 @@ namespace PointCarDealer.Points
         {
             Panel panel = Context.PanelHelper.Create($"{PatternName} - Ajouter un article", UIPanel.PanelType.Input, player, () => PointShopAddItemPanel(player));
 
-            panel.TextLines.Add("Renseigner l'ID");
+            panel.TextLines.Add("Renseigner l'ID du modèle de véhicule");
             panel.inputPlaceholder = "exemple: 5";
 
             panel.PreviousButtonWithAction("Confirmer", async () =>
             {
-                if (int.TryParse(panel.inputText, out int itemId))
+                if (int.TryParse(panel.inputText, out int modelId))
                 {
-                    if (ItemUtils.GetItemById(itemId) != null)
+                    if (Nova.v.GetVehicleByModelId(modelId) != null)
                     {
-                        PointShop_Item newItem = new PointShop_Item();
-                        newItem.ItemId = itemId;
-                        newItem.Price = 1;
-                        newItem.IsBuyable = true;
-                        newItem.IsResellable = true;
-                        if (await newItem.Save())
+                        PointCarDealer_Vehicle newVehicle = new PointCarDealer_Vehicle();
+                        newVehicle.ModelId = modelId;
+                        newVehicle.Price = 1;
+                        newVehicle.IsBuyable = true;
+                        newVehicle.IsResellable = true;
+                        if (await newVehicle.Save())
                         {
-                            LItems.Add(newItem.Id);
-                            Items = ListConverter.WriteJson(LItems);
+                            LVehicles.Add(newVehicle.Id);
+                            Vehicles = ListConverter.WriteJson(LVehicles);
                             await Save();
-                            player.Notify("PointShop", $"Article enregistré", NotificationManager.Type.Success);
+                            player.Notify("PointCarDealer", $"Article enregistré", NotificationManager.Type.Success);
                             return true;
                         }
                         else
                         {
-                            player.Notify("PointShop", $"Nous n'avons pas pu enregistrer cette article", NotificationManager.Type.Error);
+                            player.Notify("PointCarDealer", $"Nous n'avons pas pu enregistrer cette article", NotificationManager.Type.Error);
                             return false;
                         }
                     }
                     else
                     {
-                        player.Notify("PointShop", $"Aucun objet ne correspond à l'ID {itemId}", NotificationManager.Type.Warning);
+                        player.Notify("PointCarDealer", $"Aucun objet ne correspond à l'ID {modelId}", NotificationManager.Type.Warning);
                         return false;
                     }
                 }
                 else
                 {
-                    player.Notify("PointShop", "Format incorrect", NotificationManager.Type.Warning);
+                    player.Notify("PointCarDealer", "Format incorrect", NotificationManager.Type.Warning);
                     return false;
                 }
             });
@@ -216,185 +221,40 @@ namespace PointCarDealer.Points
 
             panel.Display();
         }
-        public void PointShopBuyPanel(Player player, PointShop_Item item)
+        public void PointShopAdminItemPanel(Player player, PointCarDealer_Vehicle vehicle)
         {
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Achat", UIPanel.PanelType.Input, player, () => PointShopBuyPanel(player, item));
+            var currentVehicle = Nova.v.GetVehicleByModelId(vehicle.ModelId);
+            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier un article", UIPanel.PanelType.TabPrice, player, () => PointShopAdminItemPanel(player, vehicle));
 
-            panel.TextLines.Add("Renseigner la quantité");
-
-            panel.PreviousButtonWithAction("Confirmer", async () => {
-                if (int.TryParse(panel.inputText, out int quantity))
-                {
-                    if (quantity > 0)
-                    {
-                        double total = quantity * item.Price;
-
-                        if ((IsBizPoint && player.biz.Bank >= total) || (!IsBizPoint && player.character.Money >= total))
-                        {
-                            if (InventoryUtils.AddItem(player, item.ItemId, quantity))
-                            {
-                                if (!IsBizPoint) player.AddMoney(-total, $"PointShop - {PatternName}");
-                                else
-                                {
-                                    player.biz.Bank -= total;
-                                    player.biz.Save();
-                                }
-
-                                var currentItem = ItemUtils.GetItemById(item.ItemId);
-                                player.Notify("Achat", $"Vous venez d'acheter {quantity} {currentItem.itemName} pour {quantity * item.Price}€", NotificationManager.Type.Success);
-
-                                #region LOG
-                                PointShop_Logs newLog = new PointShop_Logs();
-                                newLog.ShopId = Id;
-                                newLog.CharacterId = player.character.Id;
-                                newLog.CharacterFullName = player.GetFullName();
-                                newLog.ItemId = item.ItemId;
-                                newLog.BizId = player.character.BizId;
-                                newLog.Quantity = quantity;
-                                newLog.IsPurchase = true;
-                                newLog.Price = item.Price;
-                                newLog.CreatedAt = DateUtils.GetNumericalDateOfTheDay();
-                                await newLog.Save();
-                                #endregion
-
-                                var cityHall = Nova.biz.FetchBiz(PointShop._pointShopConfig.CityHallId);
-                                cityHall.Bank += (total / 100) * PointShop._pointShopConfig.TaxPercentage;
-                                cityHall.Save();
-
-                                return true;
-                            }
-                            else
-                            {
-                                player.Notify("Achat", $"Vous n'avez pas suffisament d'espace dans votre inventaire", NotificationManager.Type.Warning);
-                                return false;
-                            }
-                        }
-                        else
-                        {
-                            player.Notify("Achat", $"Vous n'avez pas suffisament d'argent ({total}€)", NotificationManager.Type.Warning);
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        player.Notify("Achat", $"Quantité incorrect", NotificationManager.Type.Warning);
-                        return false;
-                    }
-                }
-                else
-                {
-                    player.Notify("Achat", $"Format incorrect", NotificationManager.Type.Warning);
-                    return false;
-                }
-            });
-            panel.PreviousButton();
-            panel.CloseButton();
-
-            panel.Display();
-        }
-        public void PointShopSellPanel(Player player, PointShop_Item item)
-        {
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Vendre", UIPanel.PanelType.Input, player, () => PointShopSellPanel(player, item));
-
-            panel.TextLines.Add("Renseigner la quantité");
-
-            panel.PreviousButtonWithAction("Confirmer", async () => {
-                if (int.TryParse(panel.inputText, out int quantity))
-                {
-                    if (quantity > 0)
-                    {
-                        double total = quantity * item.Price;
-
-                        if (InventoryUtils.CheckInventoryContainsItem(player, item.ItemId, quantity))
-                        {
-                            InventoryUtils.RemoveFromInventory(player, item.ItemId, quantity);
-
-                            if (!IsBizPoint) player.AddMoney(total, $"PointShop - {PatternName}");
-                            else
-                            {
-                                player.biz.Bank += total;
-                                player.biz.Save();
-                            }
-
-                            var currentItem = ItemUtils.GetItemById(item.ItemId);
-                            player.Notify("Achat", $"Vous venez de vendre {quantity} {currentItem.itemName} pour {quantity * item.Price}€", NotificationManager.Type.Success);
-
-                            #region LOG
-                            PointShop_Logs newLog = new PointShop_Logs();
-                            newLog.ShopId = Id;
-                            newLog.CharacterId = player.character.Id;
-                            newLog.CharacterFullName = player.GetFullName();
-                            newLog.ItemId = item.ItemId;
-                            newLog.BizId = player.character.BizId;
-                            newLog.Quantity = quantity;
-                            newLog.IsPurchase = false;
-                            newLog.Price = item.Price;
-                            newLog.CreatedAt = DateUtils.GetNumericalDateOfTheDay();
-                            await newLog.Save();
-                            #endregion
-
-                            return true;
-                        }
-                        else
-                        {
-                            var currentItem = ItemUtils.GetItemById(item.ItemId);
-                            player.Notify("Achat", $"Vous n'avez pas suffisament de {currentItem.itemName} dans votre inventaire", NotificationManager.Type.Warning);
-                            return false;
-                        }
-
-
-                    }
-                    else
-                    {
-                        player.Notify("Achat", $"Quantité incorrect", NotificationManager.Type.Warning);
-                        return false;
-                    }
-                }
-                else
-                {
-                    player.Notify("Achat", $"Format incorrect", NotificationManager.Type.Warning);
-                    return false;
-                }
-            });
-            panel.PreviousButton();
-            panel.CloseButton();
-
-            panel.Display();
-        }
-        public void PointShopAdminItemPanel(Player player, PointShop_Item item)
-        {
-            var currentItem = ItemUtils.GetItemById(item.ItemId);
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier un article", UIPanel.PanelType.TabPrice, player, () => PointShopAdminItemPanel(player, item));
-
-            panel.AddTabLine($"{mk.Color("Objet:", mk.Colors.Info)} {currentItem.itemName}", "", ItemUtils.GetIconIdByItemId(item.ItemId), _ =>
+            panel.AddTabLine($"{mk.Color("Modèle:", mk.Colors.Info)} {VehicleUtils.GetModelNameByModelId(vehicle.ModelId)}", "", IconUtils.Others.None.Id, _ =>
             {
                 player.Notify("PointShop", "Vous ne pouvez pas modifier cette valeur", NotificationManager.Type.Warning);
                 panel.Refresh();
             });
-            panel.AddTabLine($"{mk.Color("Prix:", mk.Colors.Info)} {item.Price}€", "", ItemUtils.GetIconIdByItemId(item.ItemId), _ =>
+            panel.AddTabLine($"{mk.Color("Prix:", mk.Colors.Info)} {vehicle.Price}€", "", IconUtils.Others.None.Id, _ =>
             {
-                PointShopItemPricePanel(player, item);
+                PointShopItemPricePanel(player, vehicle);
             });
-            panel.AddTabLine($"{mk.Color("Achetable:", mk.Colors.Info)} {(item.IsBuyable ? "Oui" : "Non")}", "", ItemUtils.GetIconIdByItemId(item.ItemId), async _ =>
+            panel.AddTabLine($"{mk.Color("Achetable:", mk.Colors.Info)} {(vehicle.IsBuyable ? "Oui" : "Non")}", "", IconUtils.Others.None.Id, async _ =>
             {
-                item.IsBuyable = !item.IsBuyable;
-                if (await item.Save()) player.Notify("PointShop", "Modification enregistrée", NotificationManager.Type.Success);
-                else player.Notify("PointShop", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
+                vehicle.IsBuyable = !vehicle.IsBuyable;
+                if (await vehicle.Save()) player.Notify("PointCarDealer", "Modification enregistrée", NotificationManager.Type.Success);
+                else player.Notify("PointCarDealer", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
                 panel.Refresh();
             });
-            panel.AddTabLine($"{mk.Color("Vendable:", mk.Colors.Info)} {(item.IsResellable ? "Oui" : "Non")}", "", ItemUtils.GetIconIdByItemId(item.ItemId), async _ =>
+            panel.AddTabLine($"{mk.Color("Vendable:", mk.Colors.Info)} {(vehicle.IsResellable ? "Oui" : "Non")}", "", IconUtils.Others.None.Id, async _ =>
             {
-                item.IsResellable = !item.IsResellable;
-                if (await item.Save()) player.Notify("PointShop", "Modification enregistrée", NotificationManager.Type.Success);
-                else player.Notify("PointShop", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
+                vehicle.IsResellable = !vehicle.IsResellable;
+                if (await vehicle.Save()) player.Notify("PointCarDealer", "Modification enregistrée", NotificationManager.Type.Success);
+                else player.Notify("PointCarDealer", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
                 panel.Refresh();
             });
 
             panel.NextButton("Sélectionner", () => panel.SelectTab());
             panel.PreviousButtonWithAction("Supprimer", async () =>
             {
-                LItems.Remove(item.Id);
-                Items = JsonConvert.SerializeObject(LItems);
+                LVehicles.Remove(vehicle.Id);
+                Vehicles = JsonConvert.SerializeObject(LVehicles);
                 if (await Save())
                 {
                     player.Notify("PointShop", "Suppression confirmée", NotificationManager.Type.Success);
@@ -412,9 +272,9 @@ namespace PointCarDealer.Points
 
             panel.Display();
         }
-        public void PointShopItemPricePanel(Player player, PointShop_Item item)
+        public void PointShopItemPricePanel(Player player, PointCarDealer_Vehicle vehicle)
         {
-            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier le prix", UIPanel.PanelType.Input, player, () => PointShopItemPricePanel(player, item));
+            Panel panel = Context.PanelHelper.Create($"{PatternName} - Modifier le prix", UIPanel.PanelType.Input, player, () => PointShopItemPricePanel(player, vehicle));
 
             panel.TextLines.Add("Définir le prix");
             panel.inputPlaceholder = "exemple: 1.50";
@@ -425,21 +285,21 @@ namespace PointCarDealer.Points
                 //DEBUG FORMAT INCORRECT AVEC POINT OU VIRGULE
                 if (double.TryParse(inputText, out double price))
                 {
-                    item.Price = Math.Round(price, 2);
-                    if (await item.Save())
+                    vehicle.Price = Math.Round(price, 2);
+                    if (await vehicle.Save())
                     {
-                        player.Notify("PointShop", "Modification enregistrée", NotificationManager.Type.Success);
+                        player.Notify("PointCarDealer", "Modification enregistrée", NotificationManager.Type.Success);
                         return true;
                     }
                     else
                     {
-                        player.Notify("PointShop", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
+                        player.Notify("PointCarDealer", "Nous n'avons pas pu enregistrer cette modification", NotificationManager.Type.Error);
                         return true;
                     }
                 }
                 else
                 {
-                    player.Notify("PointShop", "Format incorrect", NotificationManager.Type.Warning);
+                    player.Notify("PointCarDealer", "Format incorrect", NotificationManager.Type.Warning);
                     return false;
                 }
             });
@@ -447,7 +307,7 @@ namespace PointCarDealer.Points
             panel.CloseButton();
 
             panel.Display();
-        }*/
+        }
         #endregion
 
         /// <summary>
@@ -585,6 +445,8 @@ namespace PointCarDealer.Points
                     newCarDealer.BizAllowed = ListConverter.WriteJson(LBizAllowed);
                     newCarDealer.LVehicles = new List<int>();
                     newCarDealer.Vehicles = ListConverter.WriteJson(LVehicles);
+                    newCarDealer.LSpawnPosition = player.setup.transform.position;
+                    newCarDealer.SpawnPosition = Vector3Converter.WriteJson(LSpawnPosition);
 
                     //function to call for the following property
                     // If you want to generate your point

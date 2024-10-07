@@ -5,6 +5,7 @@ using ModKit.Helper;
 using ModKit.Interfaces;
 using Newtonsoft.Json;
 using PointCarDealer.Classes;
+using PointCarDealer.Entities;
 using System.IO;
 using _menu = AAMenu.Menu;
 using mk = ModKit.Helper.TextFormattingHelper;
@@ -28,8 +29,8 @@ namespace PointCarDealer
             InitConfig();
             _pointCarDealerConfig = LoadConfigFile(ConfigPointCarDealerPath);
 
-            /*Orm.RegisterTable<PointShop_Logs>();
-            Orm.RegisterTable<PointShop_Item>();*/
+            Orm.RegisterTable<PointCarDealer_Vehicle>();
+            Orm.RegisterTable<PointCarDealer_Logs>();
 
             Orm.RegisterTable<Points.CarDealer>();
             PointHelper.AddPattern("CarDealer", new Points.CarDealer(false));
