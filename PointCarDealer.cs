@@ -46,7 +46,7 @@ namespace PointCarDealer
         {
             try
             {
-                ConfigDirectoryPath = DirectoryPath + "/PointShop";
+                ConfigDirectoryPath = DirectoryPath + "/PointCarDealer";
                 ConfigPointCarDealerPath = Path.Combine(ConfigDirectoryPath, "pointCarDealerConfig.json");
 
                 if (!Directory.Exists(ConfigDirectoryPath)) Directory.CreateDirectory(ConfigDirectoryPath);

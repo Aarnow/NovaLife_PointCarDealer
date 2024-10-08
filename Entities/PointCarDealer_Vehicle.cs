@@ -6,6 +6,7 @@ namespace PointCarDealer.Entities
     {
         [AutoIncrement][PrimaryKey] public int Id { get; set; }
         public int ModelId { get; set; }
+        public string ModelName { get; set; }
         public double Price { get; set; }
         public bool IsBuyable { get; set; }
         public bool IsResellable { get; set; }
