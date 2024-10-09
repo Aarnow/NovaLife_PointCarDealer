@@ -160,7 +160,7 @@ namespace PointCarDealer.Points
                             cityHall.Bank += (currentVehicle.Price/100) * PointCarDealer._pointCarDealerConfig.TaxPercentage;
                             cityHall.Save();
 
-                            string permission = !IsBizPoint ? $"{{\"owner\":{{\"groupId\":0,\"characterId\":{(player.character.Id).ToString()}}},\"coOwners\":[]}}" : $"{{\"owner\":{{\"groupId\":0,\"characterId\":0}},\"coOwners\":[]}}";
+                            string permission = !IsBizPoint ? $"{{\"owner\":{{\"groupId\":0,\"characterId\":{player.character.Id}}},\"coOwners\":[]}}" : $"{{\"owner\":{{\"groupId\":0,\"characterId\":0}},\"coOwners\":[]}}";
                             var newVehicle = await LifeDB.CreateVehicle(vehicles[panel.selectedTab].ModelId, permission);
                             newVehicle.BizId = IsBizPoint ? player.character.BizId : 0;
                             var lifeVehicle = Nova.v.GetVehicle(newVehicle.Id);
