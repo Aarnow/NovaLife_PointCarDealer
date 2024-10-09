@@ -98,7 +98,7 @@ namespace PointCarDealer.Points
                     PointCarDealer_Vehicle currentVehicle = vehicles[panel.selectedTab];
                     Bizs cityHall = Nova.biz.FetchBiz(PointCarDealer._pointCarDealerConfig.CityHallId);
 
-                    if(currentVehicle == null)
+                    if(cityHall == null)
                     {
                         player.Notify("PointCarDealer", "Nous ne parvenons pas à joindre la Mairie (cf. config)", NotificationManager.Type.Error);
                         panel.Refresh();
@@ -116,7 +116,6 @@ namespace PointCarDealer.Points
                             foreach (var v in allVehicles)
                             {
                                 float distance = Vector3.Distance(LSpawnPosition, v.transform.position);
-                                Console.WriteLine("distance: " + distance);
                                 if (distance <= maxDistance)
                                 {
                                     player.Notify("PointCarDealer", "Vous devez libérer l'emplacement d'apparition", NotificationManager.Type.Warning);
@@ -129,7 +128,6 @@ namespace PointCarDealer.Points
                             foreach (var v in allFakeFehicles)
                             {
                                 float distance = Vector3.Distance(LSpawnPosition, v.transform.position);
-                                Console.WriteLine("distance: " + distance);
                                 if (distance <= maxDistance)
                                 {
                                     player.Notify("PointCarDealer", "Vous devez libérer l'emplacement d'apparition", NotificationManager.Type.Warning);
@@ -152,7 +150,7 @@ namespace PointCarDealer.Points
                             await newLog.Save();
                             #endregion
 
-
+                            
                             if (IsBizPoint)
                             {
                                 player.biz.Bank -= currentVehicle.Price;
@@ -162,8 +160,11 @@ namespace PointCarDealer.Points
                             cityHall.Bank += (currentVehicle.Price/100) * PointCarDealer._pointCarDealerConfig.TaxPercentage;
                             cityHall.Save();
 
-                            var newVehicle = await LifeDB.CreateVehicle(vehicles[panel.selectedTab].ModelId, $"{{\"owner\":{{\"groupId\":0,\"characterId\":{player.character.Id}}},\"coOwners\":[]}}");
+                            string permission = !IsBizPoint ? $"{{\"owner\":{{\"groupId\":0,\"characterId\":{(player.character.Id).ToString()}}},\"coOwners\":[]}}" : $"{{\"owner\":{{\"groupId\":0,\"characterId\":0}},\"coOwners\":[]}}";
+                            var newVehicle = await LifeDB.CreateVehicle(vehicles[panel.selectedTab].ModelId, permission);
+                            newVehicle.BizId = IsBizPoint ? player.character.BizId : 0;
                             var lifeVehicle = Nova.v.GetVehicle(newVehicle.Id);
+                            lifeVehicle.bizId = IsBizPoint ? player.character.BizId : 0;
                             lifeVehicle.serigraphie = vehicles[panel.selectedTab].Serigraphie;
                             lifeVehicle.x = LSpawnPosition.x;
                             lifeVehicle.y = LSpawnPosition.y;
@@ -218,7 +219,6 @@ namespace PointCarDealer.Points
         {
             List<PointCarDealer_Logs> logs = await PointCarDealer_Logs.QueryAll();
             logs = logs.Where(l => l.CarDealerId == Id && l.BizId == player.character.BizId).ToList();
-            Console.WriteLine(logs.Count);
 
             logs.Reverse();
 
@@ -511,9 +511,9 @@ namespace PointCarDealer.Points
                     panel.Refresh();
                 }
             });
-            panel.AddTabLine($"{mk.Color("Position du spawn:", mk.Colors.Info)} {pattern.SpawnPosition}", _ =>
+            panel.AddTabLine($"{mk.Color("Modifier la position du spawn", mk.Colors.Warning)}", _ =>
             {
-                SetPositionAndRotation(player, true);
+                pattern.SetPositionAndRotation(player, true);
             });
 
             panel.NextButton("Sélectionner", () => panel.SelectTab());
@@ -583,9 +583,10 @@ namespace PointCarDealer.Points
 
         public void SetPositionAndRotation(Player player, bool isEditing = false)
         {
-            Panel panel = Context.PanelHelper.Create($"{(!isEditing ? "Créer" : "Modifier")} un modèle de {TypeName}", UIPanel.PanelType.Text, player, () => SetPositionAndRotation(player));
+            Panel panel = Context.PanelHelper.Create($"{(!isEditing ? "Définir" : "Modifier")} la position du spawn", UIPanel.PanelType.Text, player, () => SetPositionAndRotation(player));
 
-            panel.TextLines.Add("Cliquer sur confirmer pour enregistrer votre actuelle position et rotation pour définir le spawn des véhicules");
+            panel.TextLines.Add($"{mk.Size($"Cliquez sur confirmer pour enregistrer votre {mk.Color("position et rotation actuelles", mk.Colors.Orange)} afin de définir {mk.Color("le lieu de spawn", mk.Colors.Orange)} des véhicules.", 16)}");
+            panel.TextLines.Add($"{mk.Size($"{mk.Italic($"{mk.Color($"La zone doit être éloignée des véhicules environnants.", mk.Colors.Grey)}")}", 14)}");
 
             if (!isEditing)
             {
@@ -604,10 +605,18 @@ namespace PointCarDealer.Points
                     SpawnPosition = Vector3Converter.WriteJson(LSpawnPosition);
                     LSpawnRotation = player.setup.transform.rotation;
                     SpawnRotation = QuaternionConverter.WriteJson(LSpawnRotation);
-                    if (await Save()) return true;
+                    if (await Save())
+                    {
+                        Console.WriteLine("SAVE");
+                        Console.WriteLine(Id);
+                        Console.WriteLine(PatternName);
+                        Console.WriteLine(SpawnPosition);
+                        player.Notify("PointCarDealer", "Position enregistrée", NotificationManager.Type.Success);
+                        return true;
+                    }
                     else
                     {
-                        player.Notify("Erreur", "échec lors de la sauvegarde de vos changements", Life.NotificationManager.Type.Error);
+                        player.Notify("Erreur", "échec lors de la sauvegarde de vos changements", NotificationManager.Type.Error);
                         return false;
                     }
                 });
